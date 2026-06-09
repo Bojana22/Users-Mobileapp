@@ -15,6 +15,9 @@ Student App е дел од системот Classroom Presence System. Оваа 
 Јазик и рамка: Java + XML (Android)
 NFC / HCE (Host Card Emulation): Симулација на картичка преку IsoDep / APDU протоколи.
 
+Aвтор:
+Бојана Лазарова 102744, Мартина Диванисова 102752, Ненад Јовановски 102743
+
 ## Поврзани репозиториуми
 - [Backend] (https://github.com/MDivanisova/ClassroomPresenceSystem-Backend) — серверска страна
 - https://github.com/MDivanisova/ClassroomPresenceSystem-Frontend
