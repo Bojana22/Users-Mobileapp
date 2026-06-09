@@ -1,9 +1,12 @@
 package com.example.users;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -16,12 +19,28 @@ public class NfcActivity extends AppCompatActivity {
     private TextView tvHeaderStudentName, tvHeaderStudentId, tvNfcStatusTitle, tvNfcStatusDetails;
     private View statusIndicator;
 
+    private final BroadcastReceiver nfcTransmittedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            runOnUiThread(() -> {
+                tvNfcStatusTitle.setText("✅ Присуството е евидентирано!");
+                tvNfcStatusDetails.setText("Вашите податоци беа испратени до наставникот.");
+
+                GradientDrawable circle = new GradientDrawable();
+                circle.setShape(GradientDrawable.OVAL);
+                circle.setColor(0xFF4CAF50);
+                statusIndicator.setBackground(circle);
+
+                Toast.makeText(NfcActivity.this, "✅ НФЦ пренос успешен!", Toast.LENGTH_SHORT).show();
+            });
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_nfc);
 
-        // Врзување на елементите од XML
         tvHeaderStudentName = findViewById(R.id.tvHeaderStudentName);
         tvHeaderStudentId = findViewById(R.id.tvHeaderStudentId);
         tvNfcStatusTitle = findViewById(R.id.tvNfcStatusTitle);
@@ -29,51 +48,46 @@ public class NfcActivity extends AppCompatActivity {
         statusIndicator = findViewById(R.id.statusIndicator);
         Button btnStudentLogout = findViewById(R.id.btnStudentLogout);
 
-        // Наместете го индикаторот за статус да биде кружен
+        // Сив круг = чека
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
-        circle.setColor(getIntent().getBooleanExtra("isPresent", false) ? 0xFF4CAF50 : 0xFFE57373); // Зелено или Црвено
+        circle.setColor(0xFF9E9E9E);
         statusIndicator.setBackground(circle);
 
-        // Читање на податоците за најавениот студент од SharedPreferences
         SharedPreferences sharedPref = getSharedPreferences("StudentPrefs", Context.MODE_PRIVATE);
         String studentName = sharedPref.getString("studentName", "Непознат Студент");
         String userId = sharedPref.getString("userId", "Нема ID");
 
-        // Поставување на податоците во Хедерот
         tvHeaderStudentName.setText(studentName);
         tvHeaderStudentId.setText("ID: " + userId);
+        tvNfcStatusTitle.setText("Подготвен за скенирање");
+        tvNfcStatusDetails.setText("Доближете го телефонот до телефонот на наставникот.");
 
-        // Логика за одјавување (Logout)
         btnStudentLogout.setOnClickListener(v -> {
-            // Бришење на зачуваната сесија
             SharedPreferences.Editor editor = sharedPref.edit();
             editor.clear();
             editor.apply();
-
             Toast.makeText(NfcActivity.this, "Успешно се одјавивте", Toast.LENGTH_SHORT).show();
-
-            // Враќање назад на Login екранот (MainActivity)
             Intent intent = new Intent(NfcActivity.this, MainActivity.class);
             startActivity(intent);
             finish();
         });
-
-        // ТУКА ПОНАТАМУ: Твојот постоечки код за NFC скенирање (BroadcastReceiver, итн.)
     }
 
-    // Оваа метода можеш да ја повикаш од твојот NFC код кога успешно ќе се скенира картичка/телефон
-    public void setStudentPresent(String classroomName) {
-        tvNfcStatusTitle.setText("Успешно евидентирано присуство!");
-        tvNfcStatusDetails.setText("Вашето присуство е зачувано во системот.");
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter filter = new IntentFilter(MyNfcService.NFC_TRANSMITTED_ACTION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            registerReceiver(nfcTransmittedReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        }
+    }
 
-        // Промена на индикаторот во зелена боја
-        GradientDrawable circle = new GradientDrawable();
-        circle.setShape(GradientDrawable.OVAL);
-        circle.setColor(0xFF4CAF50); // Зелена боја
-        statusIndicator.setBackground(circle);
-
-        TextView tvCurrentClassroom = findViewById(R.id.tvCurrentClassroom);
-        tvCurrentClassroom.setText(classroomName);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        try {
+            unregisterReceiver(nfcTransmittedReceiver);
+        } catch (IllegalArgumentException ignored) {}
     }
 }
